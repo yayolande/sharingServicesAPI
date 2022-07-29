@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+   <meta charset="UTF-8">
+   <title></title>
+</head>
+<body>
+   <style>
+      #file-listing {
+         width: 800px;
+         margin: 0 auto;
+         /* padding: 10px 20px; */
+         border: 1px solid grey;
+         border-radius: 4px;
+         cursor: pointer;
+      }
+
+      .list-entry {
+         /* display: block; */
+         padding: 5px 40px;
+         border-bottom: 1px solid grey;
+      }
+
+      .list-entry:last-child {
+         border-bottom: 0;
+      }
+
+      .list-folder {
+         border-left: 8px solid red;
+      }
+
+      /* .list-not-folder {
+
+      } */
+
+
+      #file-dialog {
+         width: 800px;
+         margin: 0 auto;
+         padding: 10px 20px;
+         text-align: center;
+      }
+   </style>
+
+   <div id="file-listing">
+      <div class="list-entry list-folder">
+         <div>Folder</div>
+      </div>
+      <div class="list-entry">
+         <div>Not a folder</div>
+      </div>
+   </div>
+
+   <div id="file-dialog">
+      <input type="file">
+      <button id="send-button">Send File(s)</button>
+   </div>
+
+   <script>
+      const inputFile = document.querySelector('input[type="file"]');
+      const sendButton = document.getElementById('send-button');
+      let currentPath = '';
+      getDirectoryContain(currentPath);
+
+      sendButton.addEventListener ('click', (event) => {
+         const formData = new FormData();
+         formData.append ('title', 'Desktop application shortcut launcher for game');
+         formData.append ('data', inputFile.files[0]);
+         console.log ('file is : ', inputFile.files[0]);
+
+         fetch ('/api/file/', { 'method': 'POST', 'body': formData })
+            .then ((response) => response.json())
+            .then ((result) => {
+               console.log ('Data sent back : ', result);
+            });
+      });
+
+      function getDirectoryContain (path) {
+         // const url = '/api/hierarchy/' + path;
+         const url = `/api/hierarchy/${path}`;
+         fetch (url, { 'method' : 'GET' })
+            .then ((response) => response.json())
+            .then ((result) => {
+               console.log ('ls : ', result);
+               printDirectoryContain (result);
+               // currentPath = `${currentPath}/${path}`;
+            });
+      }
+
+      function printDirectoryContain (data) {
+         let fileListing = document.getElementById ('file-listing');
+         let listElement = undefined;
+
+         fileListing.innerHTML = "";
+         
+         let directories = data.directories;
+         directories.forEach((el) => {
+            addFileToList (fileListing, el, 'list-entry list-folder');
+         });
+
+         let files = data.files;
+         files.forEach((el) => {
+            addFileToList (fileListing, el, 'list-entry list-regular-file');
+         });
+
+         // let type = 0;
+         // const classNameByElementType = ['list-entry list-folder', 'list-entry'];
+
+         // Object.values(data).forEach ((fileType) => {
+         //    fileType.forEach ((fileName) => {
+         //       addFileToList (fileListing, fileName, classNameByElementType[type]);
+         //    });
+
+         //    type ++;
+         // });
+      }
+
+      function addFileToList (list, fileName, decorator) {
+         let listElement = undefined;
+
+         // listElement = document.createElement ('a');
+         // listElement.href = `${fileName}`;
+         // listElement.className = decorator;
+         // listElement.innerHTML = `<div>${fileName}</div>`;
+
+         // Use static file sharing on node server
+
+         listElement = document.createElement ('div');
+         listElement.className = decorator;
+         listElement.innerHTML = `<div>${fileName}</div>`;
+         list.appendChild (listElement);
+
+         listElement.addEventListener ('click', actionToPerformOnClick);
+      }
+
+      function actionToPerformOnClick (event) {
+         let classList = this.className;
+         let fileName = '';
+         let path = '';
+
+         if (classList.match ('list-folder')) {
+            let directoryName = this.innerText;
+            path = `${currentPath}/${directoryName}`;
+            getDirectoryContain (path);
+
+            currentPath = path;
+            console.log ('currentPath = ', currentPath);
+            // TODO: guard and resolve against path with consecutive '/'
+            // TODO: Create a path class to manage path navigation
+            // look for libraries or create yours
+         }
+         if (classList.match ('list-regular-file')) {
+            console.log (this, 'is a file');
+
+            let fileName = this.innerText;
+            path = `/api/file/${currentPath}/${fileName}`;
+            downloadFile (path);
+            
+         }
+      }
+
+      function downloadFile (url) {
+         // fetch (path, { 'method': 'GET' })
+         //    .then ((response) => {
+         //       console.log ('file downloaded with success !!');
+         //       console.log (response.text());
+         //    });
+         const anchor = document.createElement ('a');
+         anchor.href = url;
+
+         document.body.appendChild(anchor);
+         anchor.click();
+         document.body.removeChild(anchor);
+      }
+   </script>
+</body>
+</html>
