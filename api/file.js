@@ -22,18 +22,37 @@ function getRouterFileAPI(express, app, originPath) {
     })
         .post(function (req, res) {
         if (!req.files || Object.keys(req.files).length === 0) {
-            res.status(400).send('No file have been uploaded.');
+            res.status(400).send('No files have been uploaded.');
             return;
         }
-        var file = req.files;
+        var files = req.files;
+        var uploadPath = "";
         var filePath = req.params.filePath;
         filePath = path.join(originPath, filePath);
+        if (Array.isArray(files.data)) {
+            files.data.forEach(function (el) {
+                uploadPath = path.join(filePath, el.name);
+                moveUploadedFileToDisk(el, uploadPath);
+            });
+        }
+        else {
+            uploadPath = path.join(filePath, files.data.name);
+            moveUploadedFileToDisk(files.data, uploadPath);
+        }
         console.log('req.body', req.body);
-        console.log('file info : ', file);
-        var uploadPath = path.join(filePath, file.data.name);
-        file.data.mv(uploadPath, function (err) { console.log(err); });
+        console.log('files info : ', files);
         res.status(200).send({});
     });
     return router;
+}
+function moveUploadedFileToDisk(file, dstLocation) {
+    var error = "";
+    file.mv(dstLocation, function (err) {
+        if (err) {
+            console.log('error message : ', err);
+            error = err;
+        }
+    });
+    return error;
 }
 module.exports = getRouterFileAPI;

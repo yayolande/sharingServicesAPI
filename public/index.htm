@@ -16,7 +16,7 @@
       }
 
       .list-entry {
-         /* display: block; */
+         display: block;
          padding: 5px 40px;
          border-bottom: 1px solid grey;
       }
@@ -52,20 +52,24 @@
    </div>
 
    <div id="file-dialog">
-      <input type="file">
+      <input type="file" multiple>
       <button id="send-button">Send File(s)</button>
    </div>
 
    <script>
       const inputFile = document.querySelector('input[type="file"]');
       const sendButton = document.getElementById('send-button');
-      let currentPath = '';
+      let currentPath = '.';
       getDirectoryContain(currentPath);
 
       sendButton.addEventListener ('click', (event) => {
          const formData = new FormData();
          formData.append ('title', 'Desktop application shortcut launcher for game');
-         formData.append ('data', inputFile.files[0]);
+
+         for (const el of inputFile.files) {
+            formData.append ('data', el);
+         }
+
          console.log ('file is : ', inputFile.files[0]);
 
          fetch ('/api/file/', { 'method': 'POST', 'body': formData })
@@ -102,32 +106,23 @@
          files.forEach((el) => {
             addFileToList (fileListing, el, 'list-entry list-regular-file');
          });
-
-         // let type = 0;
-         // const classNameByElementType = ['list-entry list-folder', 'list-entry'];
-
-         // Object.values(data).forEach ((fileType) => {
-         //    fileType.forEach ((fileName) => {
-         //       addFileToList (fileListing, fileName, classNameByElementType[type]);
-         //    });
-
-         //    type ++;
-         // });
       }
 
       function addFileToList (list, fileName, decorator) {
          let listElement = undefined;
+         let path = '';
 
-         // listElement = document.createElement ('a');
-         // listElement.href = `${fileName}`;
-         // listElement.className = decorator;
-         // listElement.innerHTML = `<div>${fileName}</div>`;
+         path = `/api/file/${currentPath}/${fileName}`;
+         path = repairPath (path);
+
+         listElement = document.createElement ('a');
+         listElement.download = "";
+         listElement.href = path;
+         listElement.className = decorator;
+         listElement.innerHTML = `<div>${fileName}</div>`;
 
          // Use static file sharing on node server
 
-         listElement = document.createElement ('div');
-         listElement.className = decorator;
-         listElement.innerHTML = `<div>${fileName}</div>`;
          list.appendChild (listElement);
 
          listElement.addEventListener ('click', actionToPerformOnClick);
@@ -149,14 +144,15 @@
             // TODO: Create a path class to manage path navigation
             // look for libraries or create yours
          }
-         if (classList.match ('list-regular-file')) {
-            console.log (this, 'is a file');
 
-            let fileName = this.innerText;
-            path = `/api/file/${currentPath}/${fileName}`;
-            downloadFile (path);
+         // if (classList.match ('list-regular-file')) {
+         //    console.log (this, 'is a file');
+
+         //    let fileName = this.innerText;
+         //    path = `/api/file/${currentPath}/${fileName}`;
+         //    downloadFile (path);
             
-         }
+         // }
       }
 
       function downloadFile (url) {
@@ -171,6 +167,37 @@
          document.body.appendChild(anchor);
          anchor.click();
          document.body.removeChild(anchor);
+      }
+
+      function repairPath (path) {
+         let str = "";
+
+         path.split('/').forEach((el) => {
+            if (el != "" && el != ".")
+               str += `/${el}`;
+         });
+         
+         return str;
+      }
+
+      function resolvePath (path) {
+         let arr = [];
+         let resolvedPath = "";
+
+         path.split('/').forEach ((el) => {
+            if (el === '' || el === '.')
+               ;
+            else if (el === '..')
+               arr.pop();
+            else
+               arr.push (el);
+         });
+
+         arr.forEach ((el) => {
+            resolvedPath += `/${el}`;
+         });
+
+         return resolvedPath;
       }
    </script>
 </body>
